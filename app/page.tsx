@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -94,18 +94,22 @@ import ImgDer25 from "./assets/der25.png";
 import ImgDer26 from "./assets/der26.png";
 import ImgDer27 from "./assets/der27.png";
 
-const allFunImgs = [
+type ImageAsset = {
+  src: string;
+};
+
+const allFunImgs: ImageAsset[] = [
   ImgFun1, ImgFun2, ImgFun3, ImgFun4, 
   ImgFun5, ImgFun6, ImgFun7, ImgFun8
 ];
 
-const allLimImgs = [
+const allLimImgs: ImageAsset[] = [
   ImgLim1, ImgLim2, ImgLim3, ImgLim4, ImgLim5,
   ImgLim6, ImgLim7, ImgLim8, ImgLim9, ImgLim10,
   ImgLim11, ImgLim12, ImgLim13, ImgLim14, ImgLim15, ImgLim16
 ];
 
-const allDerImgs = [
+const allDerImgs: ImageAsset[] = [
   ImgDer1, ImgDer2, ImgDer3, ImgDer4, ImgDer5,
   ImgDer6, ImgDer7, ImgDer8, ImgDer9, ImgDer10,
   ImgDer11, ImgDer12, ImgDer13, ImgDer14, ImgDer15,
@@ -114,37 +118,61 @@ const allDerImgs = [
   ImgDer26, ImgDer27
 ];
 
-class Theme {
-  constructor(name, description, images) {
+interface Theme {
+  name: string;
+  description: string;
+  images: ImageAsset[];
+}
+
+interface Exercise {
+  image: ImageAsset;
+  theme: string;
+  index: number;
+}
+
+class ThemeClass implements Theme {
+  name: string;
+  description: string;
+  images: ImageAsset[];
+
+  constructor(name: string, description: string, images: ImageAsset[]) {
     this.name = name;
     this.description = description;
     this.images = images;
   }
 }
 
-class Exercise {
-  constructor(image, theme, index) {
+class ExerciseClass implements Exercise {
+  image: ImageAsset;
+  theme: string;
+  index: number;
+
+  constructor(image: ImageAsset, theme: string, index: number) {
     this.image = image;
     this.theme = theme;
     this.index = index;
   }
 }
 
-const themes = [
-  new Theme("funciones", "Determinar Dominio, Rango y Graficar", allFunImgs),
-  new Theme("límites", "Determinar Límites o Continuidad", allLimImgs),
-  new Theme("derivadas", "Hallar Derivada o Aplicaciones", allDerImgs)
+const themes: Theme[] = [
+  new ThemeClass("funciones", "Determinar Dominio, Rango y Graficar", allFunImgs),
+  new ThemeClass("límites", "Determinar Límites o Continuidad", allLimImgs),
+  new ThemeClass("derivadas", "Hallar Derivada o Aplicaciones", allDerImgs)
 ];
 
-function getCapitalized(str) {
+function getCapitalized(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function getCheckboxId(name) {
+function getCheckboxId(name: string): string {
   return `${name}-checkbox`;
 }
 
-function CheckboxField({theme}) {
+interface CheckboxFieldProps {
+  theme: Theme;
+}
+
+function CheckboxField({ theme }: CheckboxFieldProps) {
   const {name, description} = theme; 
   const id = getCheckboxId(name);
 
@@ -197,7 +225,13 @@ function ErrorAlertDialog() {
   );
 }
 
-function ExerciseCard({ theme, image, number }) {
+interface ExerciseCardProps {
+  theme: string;
+  image: ImageAsset;
+  number: number;
+}
+
+function ExerciseCard({ theme, image, number }: ExerciseCardProps) {
 
   const badgeTheme = getCapitalized(theme);
 
@@ -215,14 +249,18 @@ function ExerciseCard({ theme, image, number }) {
         </CardAction>
         <CardTitle>{"Ejercicio #" + number}</CardTitle>
         <CardDescription>
-          {themes.find(found => found.name === theme).description}
+          {themes.find(found => found.name === theme)?.description}
         </CardDescription>
       </CardHeader>
     </Card>
   );
 }
 
-function Exercises({ exercises }) {
+interface ExercisesProps {
+  exercises: Exercise[];
+}
+
+function Exercises({ exercises }: ExercisesProps) {
   return (
     <div className="flex flex-col gap-10 mt-5">
       {exercises.map(({ theme, image }, i) => (<ExerciseCard key={`exercise-${i}`} theme={theme} image={image} number={i+1}/>))}
@@ -230,22 +268,23 @@ function Exercises({ exercises }) {
   );
 }
 
-function getRandomIndex(length) {
+function getRandomIndex(length: number): number {
   return Math.floor(Math.random() * length);
 }
 
 export default function App() {
-  const [clicked, setClickStatus] = useState(false);
-  const [exercises, setExersices] = useState([]);
-  const [shouldShowError, setErrorStatus] = useState(false);
+  const [clicked, setClickStatus] = useState<boolean>(false);
+  const [exercises, setExersices] = useState<Exercise[]>([]);
+  const [shouldShowError, setErrorStatus] = useState<boolean>(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const elements = e.target.elements;
+    const form = e.currentTarget;
+    const elements = form.elements;
 
     const chosenThemes = themes.filter(({name}, i) => {
-      const checkbox = elements[getCheckboxId(name)];
+      const checkbox = elements.namedItem(getCheckboxId(name)) as HTMLInputElement;
       const checked = checkbox.dataset.state === "checked";
 
       return checked;
@@ -254,7 +293,7 @@ export default function App() {
     const numberOfThemes = chosenThemes.length
 
     if (numberOfThemes === 0) {
-      const button = elements["error-button"]; 
+      const button = elements.namedItem("error-button") as HTMLInputElement; 
       button.click();
       return;
     }
@@ -262,7 +301,7 @@ export default function App() {
     const totalNumberOfExercises = 6;
     const numberOfExercisesPerTheme = totalNumberOfExercises / numberOfThemes;
 
-    const generatedExercises = [];
+    const generatedExercises: ExerciseClass[] = [];
 
     chosenThemes.map(theme => {
       const allImages = theme.images;
@@ -286,7 +325,7 @@ export default function App() {
       });
 
       randomIndexes.map(i => {
-        const exercise = new Exercise(allImages[i] , theme.name, i);
+        const exercise = new ExerciseClass(allImages[i], theme.name, i);
         generatedExercises.push(exercise);
       });
     });
